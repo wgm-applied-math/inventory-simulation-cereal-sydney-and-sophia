@@ -96,8 +96,8 @@ classdef Inventory < handle
                 obj.Fulfilled{end+1} = order;
             else
                 obj.Backlog{end+1} = order;
-                maybe_order_more(obj);
             end
+            maybe_order_more(obj);
         end
         function handle_end_day(obj, ~)
             if obj.OnHand >= 0
