@@ -32,9 +32,9 @@ classdef Inventory < handle
             end
             obj.Events = PriorityQueue({}, @(x) x.Time);
             obj.Log = table( ...
-                Size=[0, 3], ...
-                VariableNames={'Time', 'OnHand', 'RunningCost'}, ...
-                VariableTypes={'double', 'double', 'double'});
+                Size=[0, 4], ...
+                VariableNames={'Time', 'OnHand', 'Backlog', 'RunningCost'}, ...
+                VariableTypes={'double', 'double', 'double', 'double'});
             schedule_event(obj, BeginDay(0));
         end
         function schedule_event(obj, event)
@@ -104,14 +104,19 @@ classdef Inventory < handle
                 obj.RunningCost = obj.RunningCost ...
                     + obj.OnHand * obj.HoldingCostPerUnitPerTimeStep;
             end
-            for j=1:length(obj.Backlog)
-                obj.RunningCost = obj.RunningCost ...
-                    + obj.Backlog{j}.Amount * obj.ShortageCostPerUnitPerTimeStep;
-            end
+            obj.RunningCost = obj.RunningCost ...
+                + total_backlog(obj) * obj.ShortageCostPerUnitPerTimeStep;
             record_log(obj);
         end
+        function tb = total_backlog(obj)
+            tb = 0;
+            for j = 1:length(obj.Backlog)
+                tb = tb + obj.Backlog{j}.Amount;
+            end
+        end
         function record_log(obj)
-            obj.Log(end+1, :) = {obj.Time, obj.OnHand, obj.RunningCost};
+            tb = total_backlog(obj);
+            obj.Log(end+1, :) = {obj.Time, obj.OnHand, tb, obj.RunningCost};
         end
     end
 end
