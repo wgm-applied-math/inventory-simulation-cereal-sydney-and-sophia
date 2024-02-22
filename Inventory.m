@@ -1,23 +1,77 @@
 classdef Inventory < handle
+    % Inventory Simulation of an inventory system.
+    %   Simulation object that keeps track of orders, incoming material,
+    %   outoing material, and material on hand. Also keeps track of costs.
+    %   Some jargon: A _request_ for material means that the entity modeled
+    %   by this object orders a batch of material from a supplier, and it
+    %   will replenish this inventory. An _order_ for material means that a
+    %   customer orders material, and that order will be filled out of this
+    %   inventory.
+
     properties (SetAccess = public)
-        Time = 0.0;
+        % OnHand - Amount of material on hand
         OnHand = 0.0;
+
+        % RequestCostPerBatch - Fixed cost to request a batch of material,
+        % independent of the size of the batch.
         RequestCostPerBatch = 25.0;
+
+        % RequestCostPerUnit - Variable cost factor; cost of each unit
+        % requested in a batch.
         RequestCostPerUnit = 3.0;
+
+        % HoldingCostPerUnitPerTimeStep - Cost to hold one unit of material
+        % on hand for one time step.
         HoldingCostPerUnitPerTimeStep = 0.05/7;
+
+        % ShortageCostPerUnitPerTimeStep - Cost factor for a backlogged
+        % order; how much it costs to be one unit short for one time step.
         ShortageCostPerUnitPerTimeStep = 2.00/7;
+
+        % RequestBatchSize - When requesting a batch of material, how many
+        % units to request in a batch.
         RequestBatchSize = 600;
+
+        % ReorderLevel - When the amount of material on hand drops to this
+        % many units, request another batch.
         ReorderLevel = 200;
-        OutgoingSizeDist = makedist("Gamma", a=10, b=2);
-        OutgoingCountDist = makedist("Poisson", lambda=4);
+
+        % IncomingLeadTime - When a batch is requested, it will be this
+        % many time step before the batch arrives.
         IncomingLeadTime = 2.0;
+
+        % OutgoingSizeDist - Distribution sampled to determine the size of
+        % random outgoing orders placed to this inventory.
+        OutgoingSizeDist = makedist("Gamma", a=10, b=2);
+
+        % OutgoingCountDist - Distribution sampled to determine the number
+        % of random outgoing orders placed to this inventory per time step.
+        OutgoingCountDist = makedist("Poisson", lambda=4);
     end
     properties (SetAccess = private)
-        IncomingOrderPlaced = false;
+        % Time - Current time
+        Time = 0.0;
+
+        % RequestPlaced - True if a request has been made for a batch of
+        % material to replenish this inventory, but has not yet arrived.
+        % False if the inventory is not waiting for a request to be
+        % fulfilled. If a request has been placed, no additional request
+        % will be placed until it has been fulfilled.
+        RequestPlaced = false;
+        
+        % Events - PriorityQueue of events ordered by time.
         Events;
+
+        % Log - Table of log entries.
         Log;
+
+        % RunningCost - Total cost incurred so far.
         RunningCost = 0.0;
+
+        % Backlog - List of backlogged orders.
         Backlog = {};
+
+        % Fulfilled - List of fulfilled orders.
         Fulfilled = {};
     end
     methods
@@ -77,17 +131,17 @@ classdef Inventory < handle
                 schedule_event(obj, retry_order);
             end
             obj.Backlog = {};
-            obj.IncomingOrderPlaced = false;
+            obj.RequestPlaced = false;
         end
         function maybe_order_more(obj)
-            if ~obj.IncomingOrderPlaced && obj.OnHand <= obj.ReorderLevel
+            if ~obj.RequestPlaced && obj.OnHand <= obj.ReorderLevel
                 order_cost = obj.RequestCostPerBatch ...
                     + obj.RequestBatchSize * obj.RequestCostPerUnit;
                 obj.RunningCost = obj.RunningCost + order_cost;
                 arrival = ShipmentArrival(obj.Time + obj.IncomingLeadTime, ...
                     obj.RequestBatchSize);
                 schedule_event(obj, arrival);
-                obj.IncomingOrderPlaced = true;
+                obj.RequestPlaced = true;
             end
         end
         function handle_outgoing_order(obj, order)
