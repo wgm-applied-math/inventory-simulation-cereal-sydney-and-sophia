@@ -58,7 +58,7 @@ classdef Inventory < handle
         % fulfilled. If a request has been placed, no additional request
         % will be placed until it has been fulfilled.
         RequestPlaced = false;
-        
+
         % Events - PriorityQueue of events ordered by time.
         Events;
 
@@ -76,6 +76,8 @@ classdef Inventory < handle
     end
     methods
         function obj = Inventory(KWArgs)
+            % Inventory constructor.
+            % Public properties can be specified as named arguments.
             arguments
                 KWArgs.?Inventory;
             end
@@ -91,13 +93,31 @@ classdef Inventory < handle
                 VariableTypes={'double', 'double', 'double', 'double'});
             schedule_event(obj, BeginDay(0));
         end
+
+        function obj = run_until(obj, MaxTime)
+            % run_until Event loop.
+            %
+            % obj = run_until(obj, MaxTime) Repeatedly handle the next
+            % event until the current time is at least MaxTime.
+
+            while obj.Time < MaxTime
+                handle_next_event(obj)
+            end
+        end
+
         function schedule_event(obj, event)
+            % schedule_event Add an event object to the event queue.
+
             if event.Time < obj.Time
                 error('event happens in the past');
             end
             push(obj.Events, event);
         end
+
         function handle_next_event(obj)
+            % handle_next_event Pop the next event and use the visitor
+            % mechanism on it to do something interesting.
+
             if is_empty(obj.Events)
                 error('no unhandled events');
             end
@@ -108,12 +128,22 @@ classdef Inventory < handle
             obj.Time = event.Time;
             visit(event, obj);
         end
+
         function handle_begin_day(obj, ~)
-            % Schedule orders that come in today
+            % handle_begin_day Generate random orders that come in today.
+            %
+            % handle_begin_day(obj, begin_day_event - Handle a
+            % BeginDay event.  Generate a random number of orders
+            % of random sizes that arrive at uniformly spaced
+            % times during the day.  Each is represented by an
+            % OutgoingOrder event and added to the event queue.
+            % Also schedule the EndDay event for the end of today, and
+            % the BeginDay event for the beginning of tomorrow.
+
             n_orders = random(obj.OutgoingCountDist);
             for j=1:n_orders
                 amount = random(obj.OutgoingSizeDist);
-                event = OutgoingOrder(obj.Time+(j-1)/n_orders, amount);
+                event = OutgoingOrder(obj.Time+j/(1+n_orders), amount);
                 schedule_event(obj, event);
             end
             % Schedule the end of the day
@@ -122,6 +152,7 @@ classdef Inventory < handle
             schedule_event(obj, BeginDay(obj.Time+1));
             record_log(obj);
         end
+
         function handle_shipment_arrival(obj, arrival)
             obj.OnHand = obj.OnHand + arrival.Amount;
             % Reschedule all the backlogged orders for right now
