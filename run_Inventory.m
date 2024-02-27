@@ -1,5 +1,8 @@
 function [inventories, running_costs] = run_Inventory(NSamples)
-    inventories = {};
+    arguments
+        NSamples = 1;
+    end
+    inventories = cell([NSamples, 1]);
     running_costs = zeros([1, NSamples]);
     for j = 1:NSamples
         inventory = Inventory(OnHand=600, ReorderLevel=50, RequestBatchSize=100);

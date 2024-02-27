@@ -1,16 +1,19 @@
-classdef ShipmentArrival < handle
+classdef ShipmentArrival < Event
     properties
-        Time;
-        Amount;
+        Amount = 1;
     end
     methods
-        function obj = ShipmentArrival(Time, Amount)
+        function obj = ShipmentArrival(KWArgs)
+            % ShipmentArrival ShipmentArrival constructor.
+            % Public properties can be specified as named arguments.
             arguments
-                Time = 0.0;
-                Amount = 600;
+                KWArgs.?ShipmentArrival;
             end
-            obj.Time = Time;
-            obj.Amount = Amount;
+            fnames = fieldnames(KWArgs);
+            for ifield=1:length(fnames)
+                s = fnames{ifield};
+                obj.(s) = KWArgs.(s);
+            end
         end
         function varargout = visit(obj, other)
             [varargout{1:nargout}] = handle_shipment_arrival(other, obj);

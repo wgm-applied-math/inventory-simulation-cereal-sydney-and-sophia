@@ -91,7 +91,7 @@ classdef Inventory < handle
                 Size=[0, 4], ...
                 VariableNames={'Time', 'OnHand', 'Backlog', 'RunningCost'}, ...
                 VariableTypes={'double', 'double', 'double', 'double'});
-            schedule_event(obj, BeginDay(0));
+            schedule_event(obj, BeginDay(Time=0));
         end
 
         function obj = run_until(obj, MaxTime)
@@ -132,7 +132,7 @@ classdef Inventory < handle
         function handle_begin_day(obj, ~)
             % handle_begin_day Generate random orders that come in today.
             %
-            % handle_begin_day(obj, begin_day_event - Handle a
+            % handle_begin_day(obj, begin_day_event) - Handle a
             % BeginDay event.  Generate a random number of orders
             % of random sizes that arrive at uniformly spaced
             % times during the day.  Each is represented by an
@@ -143,38 +143,55 @@ classdef Inventory < handle
             n_orders = random(obj.OutgoingCountDist);
             for j=1:n_orders
                 amount = random(obj.OutgoingSizeDist);
-                event = OutgoingOrder(obj.Time+j/(1+n_orders), amount);
+                order_received_time = obj.Time+j/(1+n_orders);
+                event = OutgoingOrder( ...
+                    Time=order_received_time, ...
+                    Amount=amount, ...
+                    OriginalTime=order_received_time);
                 schedule_event(obj, event);
             end
             % Schedule the end of the day
-            schedule_event(obj, EndDay(obj.Time + 0.99));
+            schedule_event(obj, EndDay(Time=obj.Time+0.99));
             % Schedule the beginning of the next day
-            schedule_event(obj, BeginDay(obj.Time+1));
+            schedule_event(obj, BeginDay(Time=obj.Time+1));
             record_log(obj);
         end
 
         function handle_shipment_arrival(obj, arrival)
+            % handle_shipment_arrival A shipment has arrived in response to
+            % a request.
+            %
+            % handle_shipment_arrival(obj, arrival_event) - Handle a
+            % ShipmentArrival event.  Add the amount of material in this
+            % shipment to the on-hand amount.  Reschedule all backlogged
+            % orders to run immediately.  Set RequestPlaced to false.
+
+            % Add received amount to on-hand amount.
             obj.OnHand = obj.OnHand + arrival.Amount;
-            % Reschedule all the backlogged orders for right now
+
+            % Reschedule all the backlogged orders for right now.
             for j=1:length(obj.Backlog)
-                retry_order = OutgoingOrder(obj.Time, ...
-                    obj.Backlog{j}.Amount);
+                retry_order = reschedule(obj.Backlog{j}, obj.Time);
                 schedule_event(obj, retry_order);
             end
             obj.Backlog = {};
             obj.RequestPlaced = false;
         end
+
         function maybe_order_more(obj)
+            % maybe_order_more 
             if ~obj.RequestPlaced && obj.OnHand <= obj.ReorderLevel
                 order_cost = obj.RequestCostPerBatch ...
                     + obj.RequestBatchSize * obj.RequestCostPerUnit;
                 obj.RunningCost = obj.RunningCost + order_cost;
-                arrival = ShipmentArrival(obj.Time + obj.IncomingLeadTime, ...
-                    obj.RequestBatchSize);
+                arrival = ShipmentArrival( ...
+                    Time=obj.Time+obj.IncomingLeadTime, ...
+                    Amount=obj.RequestBatchSize);
                 schedule_event(obj, arrival);
                 obj.RequestPlaced = true;
             end
         end
+
         function handle_outgoing_order(obj, order)
             if obj.OnHand >= order.Amount
                 obj.OnHand = obj.OnHand - order.Amount;
@@ -184,6 +201,7 @@ classdef Inventory < handle
             end
             maybe_order_more(obj);
         end
+
         function handle_end_day(obj, ~)
             if obj.OnHand >= 0
                 obj.RunningCost = obj.RunningCost ...
@@ -193,12 +211,14 @@ classdef Inventory < handle
                 + total_backlog(obj) * obj.ShortageCostPerUnitPerTimeStep;
             record_log(obj);
         end
+
         function tb = total_backlog(obj)
             tb = 0;
             for j = 1:length(obj.Backlog)
                 tb = tb + obj.Backlog{j}.Amount;
             end
         end
+
         function record_log(obj)
             tb = total_backlog(obj);
             obj.Log(end+1, :) = {obj.Time, obj.OnHand, tb, obj.RunningCost};
