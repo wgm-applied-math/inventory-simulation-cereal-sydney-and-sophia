@@ -1,5 +1,8 @@
 # Ignore emacs backups
 *~
 
+# Ignore published stuff
+html/
+
 # Ignore Matlab autosave data
 *.asv
