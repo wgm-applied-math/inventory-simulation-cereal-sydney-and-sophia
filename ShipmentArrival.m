@@ -1,7 +1,7 @@
 classdef ShipmentArrival < Event
     % ShipmentArrival An event representing the arrival of a shipment.
     properties
-        % Amount The amount of material contained in this shipment.
+        % Amount - The amount of material contained in this shipment.
         % The default value is one unit.
         Amount = 1;
     end

@@ -3,10 +3,10 @@ classdef OutgoingOrder < Event
 
     properties
 
-        % Amount Amount of material being ordered.
+        % Amount - Amount of material being ordered.
         Amount = 1;
 
-        % OriginalTime The time this order was originally received. The
+        % OriginalTime - The time this order was originally received. The
         % Time property, inherited from Event, is updated by
         % Inventory.handle_shipment_arrived when a backlogged order is
         % rescheduled, so its final value represents the time at which the
