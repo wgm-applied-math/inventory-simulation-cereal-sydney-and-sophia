@@ -1,4 +1,4 @@
-classdef (Abstract=true) Event < matlab.mixin.Copyable
+classdef (Abstract=true) Event < handle
     % Event Abstract base class for all events.
 
     properties
@@ -8,7 +8,7 @@ classdef (Abstract=true) Event < matlab.mixin.Copyable
 
     methods
         function obj = Event(KWArgs)
-            % Event Event constructor.
+            % Event Constructor.
             % Public properties can be specified as named arguments.
             arguments
                 KWArgs.?Event;

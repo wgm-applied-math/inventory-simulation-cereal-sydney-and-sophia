@@ -1,10 +1,13 @@
 classdef ShipmentArrival < Event
+    % ShipmentArrival An event representing the arrival of a shipment.
     properties
+        % Amount The amount of material contained in this shipment.
+        % The default value is one unit.
         Amount = 1;
     end
     methods
         function obj = ShipmentArrival(KWArgs)
-            % ShipmentArrival ShipmentArrival constructor.
+            % ShipmentArrival Constructor.
             % Public properties can be specified as named arguments.
             arguments
                 KWArgs.?ShipmentArrival;
@@ -16,6 +19,7 @@ classdef ShipmentArrival < Event
             end
         end
         function varargout = visit(obj, other)
+            % visit Call handle_shipment_arrival.
             [varargout{1:nargout}] = handle_shipment_arrival(other, obj);
         end
     end

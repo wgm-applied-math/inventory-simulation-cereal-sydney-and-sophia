@@ -1,6 +1,6 @@
-function inventory = test_Inventory()
-    inventory = Inventory(OnHand=600);
-    while inventory.Time < 100.0
-        handle_next_event(inventory);
-    end
-end
+%% Simple script to test the Inventory class.
+inventory = Inventory( ...
+    OnHand=600, ...
+    ReorderLevel=100, ...
+    RequestBatchSize=300);
+run_until(inventory, 100);

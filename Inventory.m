@@ -1,12 +1,17 @@
 classdef Inventory < handle
     % Inventory Simulation of an inventory system.
     %   Simulation object that keeps track of orders, incoming material,
-    %   outoing material, and material on hand. Also keeps track of costs.
+    %   outoing material, material on hand, and costs.
+    %
     %   Some jargon: A _request_ for material means that the entity modeled
     %   by this object orders a batch of material from a supplier, and it
     %   will replenish this inventory. An _order_ for material means that a
     %   customer orders material, and that order will be filled out of this
     %   inventory.
+    % 
+    %   Each time step represents one day during which orders
+    %   arrive and are filled.  When the on-hand amount drops below a
+    %   thresholds, a request is placed for 
 
     properties (SetAccess = public)
         % OnHand - Amount of material on hand
@@ -62,8 +67,15 @@ classdef Inventory < handle
         % Events - PriorityQueue of events ordered by time.
         Events;
 
-        % Log - Table of log entries.
-        Log;
+        % Log - Table of log entries.  The columns are:
+        % * Time - Time of the entry
+        % * OnHand - Amount of material on hand
+        % * Backlog - Total amount of all backlogged orders
+        % * RunningCost - Total cost incurred up to that time
+        Log = table( ...
+            Size=[0, 4], ...
+            VariableNames={'Time', 'OnHand', 'Backlog', 'RunningCost'}, ...
+            VariableTypes={'double', 'double', 'double', 'double'});
 
         % RunningCost - Total cost incurred so far.
         RunningCost = 0.0;
@@ -76,7 +88,7 @@ classdef Inventory < handle
     end
     methods
         function obj = Inventory(KWArgs)
-            % Inventory constructor.
+            % Inventory Constructor.
             % Public properties can be specified as named arguments.
             arguments
                 KWArgs.?Inventory;
@@ -86,11 +98,10 @@ classdef Inventory < handle
                 s = fnames{ifield};
                 obj.(s) = KWArgs.(s);
             end
+            % Events has to be initialized in the constructor.
             obj.Events = PriorityQueue({}, @(x) x.Time);
-            obj.Log = table( ...
-                Size=[0, 4], ...
-                VariableNames={'Time', 'OnHand', 'Backlog', 'RunningCost'}, ...
-                VariableTypes={'double', 'double', 'double', 'double'});
+
+            % The first event is to begin the first day.
             schedule_event(obj, BeginDay(Time=0));
         end
 
@@ -100,7 +111,7 @@ classdef Inventory < handle
             % obj = run_until(obj, MaxTime) Repeatedly handle the next
             % event until the current time is at least MaxTime.
 
-            while obj.Time < MaxTime
+            while obj.Time <= MaxTime
                 handle_next_event(obj)
             end
         end
@@ -108,9 +119,8 @@ classdef Inventory < handle
         function schedule_event(obj, event)
             % schedule_event Add an event object to the event queue.
 
-            if event.Time < obj.Time
-                error('event happens in the past');
-            end
+            assert(event.Time >= obj.Time, ...
+                "Event happens in the past");
             push(obj.Events, event);
         end
 
@@ -118,13 +128,11 @@ classdef Inventory < handle
             % handle_next_event Pop the next event and use the visitor
             % mechanism on it to do something interesting.
 
-            if is_empty(obj.Events)
-                error('no unhandled events');
-            end
+            assert(~is_empty(obj.Events), ...
+                "No unhandled events");
             event = pop_first(obj.Events);
-            if obj.Time > event.Time
-                error('event happened in the past');
-            end
+            assert(event.Time >= obj.Time, ...
+                "Event happens in the past");
             obj.Time = event.Time;
             visit(event, obj);
         end
@@ -132,14 +140,12 @@ classdef Inventory < handle
         function handle_begin_day(obj, ~)
             % handle_begin_day Generate random orders that come in today.
             %
-            % handle_begin_day(obj, begin_day_event) - Handle a
-            % BeginDay event.  Generate a random number of orders
-            % of random sizes that arrive at uniformly spaced
-            % times during the day.  Each is represented by an
-            % OutgoingOrder event and added to the event queue.
-            % Also schedule the EndDay event for the end of today, and
-            % the BeginDay event for the beginning of tomorrow.
-
+            % handle_begin_day(obj, begin_day_event) - Handle a BeginDay
+            % event.  Generate a random number of orders of random sizes
+            % that arrive at uniformly spaced times during the day.  Each
+            % is represented by an OutgoingOrder event and added to the
+            % event queue.  Also schedule the EndDay event for the end of
+            % today, and the BeginDay event for the beginning of tomorrow.
             n_orders = random(obj.OutgoingCountDist);
             for j=1:n_orders
                 amount = random(obj.OutgoingSizeDist);
@@ -152,9 +158,6 @@ classdef Inventory < handle
             end
             % Schedule the end of the day
             schedule_event(obj, EndDay(Time=obj.Time+0.99));
-            % Schedule the beginning of the next day
-            schedule_event(obj, BeginDay(Time=obj.Time+1));
-            record_log(obj);
         end
 
         function handle_shipment_arrival(obj, arrival)
@@ -171,15 +174,21 @@ classdef Inventory < handle
 
             % Reschedule all the backlogged orders for right now.
             for j=1:length(obj.Backlog)
-                retry_order = reschedule(obj.Backlog{j}, obj.Time);
-                schedule_event(obj, retry_order);
+                order = obj.Backlog{j};
+                order.Time = obj.Time;
+                schedule_event(obj, order);
             end
             obj.Backlog = {};
             obj.RequestPlaced = false;
         end
 
-        function maybe_order_more(obj)
-            % maybe_order_more 
+        function maybe_request_more(obj)
+            % maybe_request_more If the amount of material on-hand is below
+            % the ReorderLevel, place a request for more.
+            % 
+            % If a request has been placed but not yet fulfilled, no
+            % additional request is placed.
+
             if ~obj.RequestPlaced && obj.OnHand <= obj.ReorderLevel
                 order_cost = obj.RequestCostPerBatch ...
                     + obj.RequestBatchSize * obj.RequestCostPerUnit;
@@ -193,26 +202,47 @@ classdef Inventory < handle
         end
 
         function handle_outgoing_order(obj, order)
+            % handle_outgoing_order Handle an OutgoingOrder event.
+            %
+            % handle_outgoing_order(obj, order) - If there is enough
+            % material on hand to fulfill the order, deduct the Amount of
+            % the order from OnHand, and append the order to the Fulfilled
+            % list.  Otherwise, append the order to the Backlog list.
+            % Then call maybe_request_more.  There is no attempt to
+            % partially fill an order.
             if obj.OnHand >= order.Amount
                 obj.OnHand = obj.OnHand - order.Amount;
                 obj.Fulfilled{end+1} = order;
             else
                 obj.Backlog{end+1} = order;
             end
-            maybe_order_more(obj);
+            maybe_request_more(obj);
         end
 
         function handle_end_day(obj, ~)
-            if obj.OnHand >= 0
-                obj.RunningCost = obj.RunningCost ...
-                    + obj.OnHand * obj.HoldingCostPerUnitPerTimeStep;
-            end
+            % handle_end_day Handle an EndDay event.
+            %
+            % handle_end_day(obj, end_day) - Record holding cost for the
+            % amount of material on hand.  Record shortage cost for the
+            % total amount of all backlogged orders.  Record an entry to
+            % the Log table.  Schedule the beginning of the next day to
+            % happen immediately.
+            % 
+            % *Note:* There is no separate RecordToLog event in this
+            % simulation like there is in ServiceQueue.
+
+            obj.RunningCost = obj.RunningCost ...
+                + obj.OnHand * obj.HoldingCostPerUnitPerTimeStep;
             obj.RunningCost = obj.RunningCost ...
                 + total_backlog(obj) * obj.ShortageCostPerUnitPerTimeStep;
             record_log(obj);
+            % Schedule the beginning of the next day to happen immediately.
+            schedule_event(obj, BeginDay(Time=obj.Time));
         end
 
         function tb = total_backlog(obj)
+            % total_backlog Compute the total amount of all backlogged
+            % orders.
             tb = 0;
             for j = 1:length(obj.Backlog)
                 tb = tb + obj.Backlog{j}.Amount;
@@ -220,6 +250,7 @@ classdef Inventory < handle
         end
 
         function record_log(obj)
+            % record_log Add an entry to the Log table.
             tb = total_backlog(obj);
             obj.Log(end+1, :) = {obj.Time, obj.OnHand, tb, obj.RunningCost};
         end

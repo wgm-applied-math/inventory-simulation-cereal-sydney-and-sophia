@@ -1,11 +1,21 @@
 classdef OutgoingOrder < Event
-    properties (SetAccess = public)
+    % OutgoingOrder Event the represents the arrival of an outgoing order.
+
+    properties
+
+        % Amount Amount of material being ordered.
         Amount = 1;
+
+        % OriginalTime The time this order was originally received. The
+        % Time property, inherited from Event, is updated by
+        % Inventory.handle_shipment_arrived when a backlogged order is
+        % rescheduled, so its final value represents the time at which the
+        % order was actually fulfilled.
         OriginalTime = 0;
     end
     methods
         function obj = OutgoingOrder(KWArgs)
-            % OutgoingOrder constructor.
+            % OutgoingOrder Constructor.
             % Public properties can be specified as named arguments.
             arguments
                 KWArgs.?OutgoingOrder;
@@ -15,10 +25,6 @@ classdef OutgoingOrder < Event
                 s = fnames{ifield};
                 obj.(s) = KWArgs.(s);
             end
-        end
-        function new = reschedule(obj, Time)
-            new = copy(obj);
-            new.Time = Time;
         end
         function varargout = visit(obj, other)
             [varargout{1:nargout}] = handle_outgoing_order(other, obj);
