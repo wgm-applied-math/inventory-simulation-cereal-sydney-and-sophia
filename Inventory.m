@@ -9,13 +9,15 @@ classdef Inventory < handle
     %   customer orders material, and that order will be filled out of this
     %   inventory.
     % 
-    %   Each time step represents one day during which orders
-    %   arrive and are filled.  When the on-hand amount drops below a
-    %   thresholds, a request is placed for 
+    %   Each time step represents one day during which orders arrive and
+    %   are filled.  When the on-hand amount drops below ReorderPoint, a
+    %   request is placed for RequestBatchSize (continuous review). The
+    %   requested material arrives on at the beginning of the day, at time
+    %   floor(now + IncomingLeadTime).
 
     properties (SetAccess = public)
         % OnHand - Amount of material on hand
-        OnHand = 0.0;
+        OnHand = 200;
 
         % RequestCostPerBatch - Fixed cost to request a batch of material,
         % independent of the size of the batch.
@@ -35,11 +37,11 @@ classdef Inventory < handle
 
         % RequestBatchSize - When requesting a batch of material, how many
         % units to request in a batch.
-        RequestBatchSize = 600;
+        RequestBatchSize = 200;
 
-        % ReorderLevel - When the amount of material on hand drops to this
+        % ReorderPoint - When the amount of material on hand drops to this
         % many units, request another batch.
-        ReorderLevel = 200;
+        ReorderPoint = 50;
 
         % IncomingLeadTime - When a batch is requested, it will be this
         % many time step before the batch arrives.
@@ -49,9 +51,10 @@ classdef Inventory < handle
         % random outgoing orders placed to this inventory.
         OutgoingSizeDist = makedist("Gamma", a=10, b=2);
 
-        % OutgoingCountDist - Distribution sampled to determine the number
-        % of random outgoing orders placed to this inventory per time step.
-        OutgoingCountDist = makedist("Poisson", lambda=4);
+        % DailyOrderCountDist - Distribution sampled to determine the
+        % number of random outgoing orders placed to this inventory per
+        % time step.
+        DailyOrderCountDist = makedist("Poisson", lambda=4);
     end
     properties (SetAccess = private)
         % Time - Current time
@@ -146,7 +149,7 @@ classdef Inventory < handle
             % is represented by an OrderReceived event and added to the
             % event queue.  Also schedule the EndDay event for the end of
             % today, and the BeginDay event for the beginning of tomorrow.
-            n_orders = random(obj.OutgoingCountDist);
+            n_orders = random(obj.DailyOrderCountDist);
             for j=1:n_orders
                 amount = random(obj.OutgoingSizeDist);
                 order_received_time = obj.Time+j/(1+n_orders);
@@ -184,17 +187,17 @@ classdef Inventory < handle
 
         function maybe_request_more(obj)
             % maybe_request_more If the amount of material on-hand is below
-            % the ReorderLevel, place a request for more.
+            % the ReorderPoint, place a request for more.
             % 
             % If a request has been placed but not yet fulfilled, no
             % additional request is placed.
 
-            if ~obj.RequestPlaced && obj.OnHand <= obj.ReorderLevel
+            if ~obj.RequestPlaced && obj.OnHand <= obj.ReorderPoint
                 order_cost = obj.RequestCostPerBatch ...
                     + obj.RequestBatchSize * obj.RequestCostPerUnit;
                 obj.RunningCost = obj.RunningCost + order_cost;
                 arrival = ShipmentArrival( ...
-                    Time=obj.Time+obj.IncomingLeadTime, ...
+                    Time=floor(obj.Time+obj.IncomingLeadTime), ...
                     Amount=obj.RequestBatchSize);
                 schedule_event(obj, arrival);
                 obj.RequestPlaced = true;
@@ -202,14 +205,14 @@ classdef Inventory < handle
         end
 
         function handle_order_received(obj, order)
-            % handle_outgoing_order Handle an OrderReceived event.
+            % handle_order_received Handle an OrderReceived event.
             %
-            % handle_outgoing_order(obj, order) - If there is enough
+            % handle_order_received(obj, order) - If there is enough
             % material on hand to fulfill the order, deduct the Amount of
             % the order from OnHand, and append the order to the Fulfilled
-            % list.  Otherwise, append the order to the Backlog list.
-            % Then call maybe_request_more.  There is no attempt to
-            % partially fill an order.
+            % list.  Otherwise, append the order to the Backlog list. Then
+            % call maybe_request_more.  There is no attempt to partially
+            % fill an order.
             if obj.OnHand >= order.Amount
                 obj.OnHand = obj.OnHand - order.Amount;
                 obj.Fulfilled{end+1} = order;
