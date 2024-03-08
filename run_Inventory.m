@@ -23,9 +23,9 @@ TotalCosts = zeros([NumSamples, 1]);
 
 for j = 1:NumSamples
     inventory = Inventory( ...
-        OnHand=600, ...
-        ReorderLevel=100, ...
-        RequestBatchSize=300);
+        OnHand=200, ...
+        ReorderPoint=50, ...
+        RequestBatchSize=200);
     run_until(inventory, MaxTime);
     InventorySamples{j} = inventory;
     TotalCosts(j) = inventory.RunningCost;
@@ -36,6 +36,7 @@ end
 % Make a figure with one set of axes.
 fig = figure();
 t = tiledlayout(fig,1,1);
+la
 ax = nexttile(t);
 
 % MATLAB-ism: Once you've created a picture, you can use "hold on" to cause
