@@ -1,5 +1,5 @@
-classdef OutgoingOrder < Event
-    % OutgoingOrder Event the represents the arrival of an outgoing order.
+classdef OrderReceived < Event
+    % OrderReceived Event the represents the arrival of an outgoing order.
 
     properties
 
@@ -14,11 +14,11 @@ classdef OutgoingOrder < Event
         OriginalTime = 0;
     end
     methods
-        function obj = OutgoingOrder(KWArgs)
-            % OutgoingOrder Constructor.
+        function obj = OrderReceived(KWArgs)
+            % OrderReceived Constructor.
             % Public properties can be specified as named arguments.
             arguments
-                KWArgs.?OutgoingOrder;
+                KWArgs.?OrderReceived;
             end
             fnames = fieldnames(KWArgs);
             for ifield=1:length(fnames)
@@ -27,7 +27,7 @@ classdef OutgoingOrder < Event
             end
         end
         function varargout = visit(obj, other)
-            [varargout{1:nargout}] = handle_outgoing_order(other, obj);
+            [varargout{1:nargout}] = handle_order_received(other, obj);
         end
     end
 end

@@ -143,14 +143,14 @@ classdef Inventory < handle
             % handle_begin_day(obj, begin_day_event) - Handle a BeginDay
             % event.  Generate a random number of orders of random sizes
             % that arrive at uniformly spaced times during the day.  Each
-            % is represented by an OutgoingOrder event and added to the
+            % is represented by an OrderReceived event and added to the
             % event queue.  Also schedule the EndDay event for the end of
             % today, and the BeginDay event for the beginning of tomorrow.
             n_orders = random(obj.OutgoingCountDist);
             for j=1:n_orders
                 amount = random(obj.OutgoingSizeDist);
                 order_received_time = obj.Time+j/(1+n_orders);
-                event = OutgoingOrder( ...
+                event = OrderReceived( ...
                     Time=order_received_time, ...
                     Amount=amount, ...
                     OriginalTime=order_received_time);
@@ -201,8 +201,8 @@ classdef Inventory < handle
             end
         end
 
-        function handle_outgoing_order(obj, order)
-            % handle_outgoing_order Handle an OutgoingOrder event.
+        function handle_order_received(obj, order)
+            % handle_outgoing_order Handle an OrderReceived event.
             %
             % handle_outgoing_order(obj, order) - If there is enough
             % material on hand to fulfill the order, deduct the Amount of

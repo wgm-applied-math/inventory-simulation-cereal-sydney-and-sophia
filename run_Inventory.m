@@ -5,23 +5,23 @@
 %% Set up
 
 % How many samples of the simulation to run.
-NSamples = 100;
+NumSamples = 100;
 
 % Run each sample for this many days.
 MaxTime = 100;
 
 % Samples are stored in this cell array of Inventory objects
-InventorySamples = cell([NSamples, 1]);
+InventorySamples = cell([NumSamples, 1]);
 
 % The final running cost of each sample is collected in this array.
-TotalCosts = zeros([NSamples, 1]);
+TotalCosts = zeros([NumSamples, 1]);
 
 %% Run simulation samples
 
 % Run samples of the simulation.
 % Log entries are recorded at the end of every day
 
-for j = 1:NSamples
+for j = 1:NumSamples
     inventory = Inventory( ...
         OnHand=600, ...
         ReorderLevel=100, ...
