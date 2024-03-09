@@ -8,7 +8,7 @@
 NumSamples = 100;
 
 % Run each sample for this many days.
-MaxTime = 100;
+MaxTime = 1000;
 
 % Samples are stored in this cell array of Inventory objects
 InventorySamples = cell([NumSamples, 1]);
@@ -39,8 +39,10 @@ t = tiledlayout(fig,1,1);
 
 ax = nexttile(t);
 
-% Histogram of the running costs at the end of MaxTime days.
-h = histogram(ax, TotalCosts, Normalization="probability");
+% Histogram of the running costs per day.
+h = histogram(ax, TotalCosts/MaxTime, Normalization="probability");
 
 % Easiest way I've found to save a figure as a PDF file
-exportgraphics(fig, "Total cost histogram.pdf");
+exportgraphics(fig, "Daily cost histogram.pdf");
+
+meanDailyCost = mean(TotalCosts/MaxTime);
