@@ -27,13 +27,13 @@ classdef Inventory < handle
         % requested in a batch.
         RequestCostPerUnit = 3.0;
 
-        % HoldingCostPerUnitPerTimeStep - Cost to hold one unit of material
-        % on hand for one time step.
-        HoldingCostPerUnitPerTimeStep = 0.05/7;
+        % HoldingCostPerUnitPerDay - Cost to hold one unit of material
+        % on hand for one day.
+        HoldingCostPerUnitPerDay = 0.05/7;
 
-        % ShortageCostPerUnitPerTimeStep - Cost factor for a backlogged
-        % order; how much it costs to be one unit short for one time step.
-        ShortageCostPerUnitPerTimeStep = 2.00/7;
+        % ShortageCostPerUnitPerDay - Cost factor for a backlogged
+        % order; how much it costs to be one unit short for one day.
+        ShortageCostPerUnitPerDay = 2.00/7;
 
         % RequestBatchSize - When requesting a batch of material, how many
         % units to request in a batch.
@@ -53,7 +53,7 @@ classdef Inventory < handle
 
         % DailyOrderCountDist - Distribution sampled to determine the
         % number of random outgoing orders placed to this inventory per
-        % time step.
+        % day.
         DailyOrderCountDist = makedist("Poisson", lambda=4);
     end
     properties (SetAccess = private)
@@ -235,9 +235,9 @@ classdef Inventory < handle
             % simulation like there is in ServiceQueue.
 
             obj.RunningCost = obj.RunningCost ...
-                + obj.OnHand * obj.HoldingCostPerUnitPerTimeStep;
+                + obj.OnHand * obj.HoldingCostPerUnitPerDay;
             obj.RunningCost = obj.RunningCost ...
-                + total_backlog(obj) * obj.ShortageCostPerUnitPerTimeStep;
+                + total_backlog(obj) * obj.ShortageCostPerUnitPerDay;
             record_log(obj);
             % Schedule the beginning of the next day to happen immediately.
             schedule_event(obj, BeginDay(Time=obj.Time));

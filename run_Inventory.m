@@ -36,15 +36,10 @@ end
 % Make a figure with one set of axes.
 fig = figure();
 t = tiledlayout(fig,1,1);
-la
+
 ax = nexttile(t);
 
-% MATLAB-ism: Once you've created a picture, you can use "hold on" to cause
-% further plotting function to work with the same picture rather than
-% create a new one.
-hold(ax, 'on');
-
-% Start with a histogram of the running costs at the end of MaxTime days.
+% Histogram of the running costs at the end of MaxTime days.
 h = histogram(ax, TotalCosts, Normalization="probability");
 
 % Easiest way I've found to save a figure as a PDF file
