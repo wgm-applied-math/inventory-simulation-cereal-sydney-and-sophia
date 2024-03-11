@@ -18,6 +18,9 @@ TotalCosts = zeros([NumSamples, 1]);
 
 %% Run simulation samples
 
+% Make this reproducible
+rng("default");
+
 % Run samples of the simulation.
 % Log entries are recorded at the end of every day
 
