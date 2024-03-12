@@ -13,7 +13,7 @@ classdef Inventory < handle
     %   are filled.  When the on-hand amount drops below ReorderPoint, a
     %   request is placed for RequestBatchSize (continuous review). The
     %   requested material arrives on at the beginning of the day, at time
-    %   floor(now + IncomingLeadTime).
+    %   floor(now + RequestLeadTime).
 
     properties (SetAccess = public)
         % OnHand - Amount of material on hand
@@ -43,9 +43,9 @@ classdef Inventory < handle
         % many units, request another batch.
         ReorderPoint = 50;
 
-        % IncomingLeadTime - When a batch is requested, it will be this
+        % RequestLeadTime - When a batch is requested, it will be this
         % many time step before the batch arrives.
-        IncomingLeadTime = 2.0;
+        RequestLeadTime = 2.0;
 
         % OutgoingSizeDist - Distribution sampled to determine the size of
         % random outgoing orders placed to this inventory.
@@ -197,7 +197,7 @@ classdef Inventory < handle
                     + obj.RequestBatchSize * obj.RequestCostPerUnit;
                 obj.RunningCost = obj.RunningCost + order_cost;
                 arrival = ShipmentArrival( ...
-                    Time=floor(obj.Time+obj.IncomingLeadTime), ...
+                    Time=floor(obj.Time+obj.RequestLeadTime), ...
                     Amount=obj.RequestBatchSize);
                 schedule_event(obj, arrival);
                 obj.RequestPlaced = true;
