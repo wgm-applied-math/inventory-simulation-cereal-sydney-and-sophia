@@ -67,12 +67,20 @@ t = tiledlayout(fig,1,1);
 ax = nexttile(t);
 
 % Histogram of the cost per day.
-h = histogram(ax, TotalCosts/MaxTime, Normalization="probability");
+h = histogram(ax, TotalCosts/MaxTime, Normalization="probability", ...
+    BinEdges=50:5:1000);
 
 title(ax, "Daily total cost");
 xlabel(ax, "Dollars");
 ylabel(ax, "Probability");
 
-% Easiest way I've found to save a figure as a PDF file
+ylim(ax, [0, 0.5]);
+xlim(ax, [240, 290]);
+
+
+% Wait for MATLAB to catch up.
+pause(2);
+
+% Save figure as a PDF file
 exportgraphics(fig, "Daily cost histogram.pdf");
 
