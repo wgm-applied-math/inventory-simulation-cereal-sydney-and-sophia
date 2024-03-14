@@ -56,6 +56,9 @@ end
 
 % Pull the RunningCost from each complete sample.
 TotalCosts = cellfun(@(i) i.RunningCost, InventorySamples);
+
+% Express it as cost per day and compute the mean, so that we get a number
+% that doesn't depend directly on how many time steps the samples run for.
 meanDailyCost = mean(TotalCosts/MaxTime);
 fprintf("Mean daily cost: %f\n", meanDailyCost);
 
@@ -68,19 +71,19 @@ ax = nexttile(t);
 
 % Histogram of the cost per day.
 h = histogram(ax, TotalCosts/MaxTime, Normalization="probability", ...
-    BinEdges=50:5:1000);
+    BinWidth=5);
 
+% Add title and axis labels
 title(ax, "Daily total cost");
 xlabel(ax, "Dollars");
 ylabel(ax, "Probability");
 
+% Fix the axis ranges
 ylim(ax, [0, 0.5]);
 xlim(ax, [240, 290]);
-
 
 % Wait for MATLAB to catch up.
 pause(2);
 
 % Save figure as a PDF file
 exportgraphics(fig, "Daily cost histogram.pdf");
-
