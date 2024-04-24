@@ -192,17 +192,31 @@ classdef Inventory < handle
             % If a request has been placed but not yet fulfilled, no
             % additional request is placed.
 
+            randnum = rand();
+            if 0 <= randnum <= 0.1
+                ShipTime = 2;
+            elseif 0.1 <= randnum <= 0.3
+                ShipTime = 3;
+            elseif 0.3 <= randnum <= 0.7
+                ShipTime = 4;
+            elseif 0.7 <= randnum <= 1
+                ShipTime = 5;
+           
+            end
+          
+
+            
             if ~obj.RequestPlaced && obj.OnHand <= obj.ReorderPoint
                 order_cost = obj.RequestCostPerBatch ...
                     + obj.RequestBatchSize * obj.RequestCostPerUnit;
                 obj.RunningCost = obj.RunningCost + order_cost;
                 arrival = ShipmentArrival( ...
-                    Time=floor(obj.Time+obj.RequestLeadTime), ...
+                    Time=floor(obj.Time+ShipTime), ...
                     Amount=obj.RequestBatchSize);
                 schedule_event(obj, arrival);
                 obj.RequestPlaced = true;
             end
-        end
+    end
 
         function handle_order_received(obj, order)
             % handle_order_received Handle an OrderReceived event.
@@ -257,5 +271,49 @@ classdef Inventory < handle
             tb = total_backlog(obj);
             obj.Log(end+1, :) = {obj.Time, obj.OnHand, tb, obj.RunningCost};
         end
+
+        function frac = fraction_orders_backlogged(obj)
+        NFulfilled = length(obj.Fulfilled);
+        NBacklogged = 0;
+        for j = 1:NFulfilled
+            x = obj.Fulfilled{j};
+            if x.Time > x.OriginalTime
+                NBacklogged = NBacklogged + 1;
+            end 
+        end 
+        frac = NBacklogged / NFulfilled;
+
+        end 
+
+        %%
+
+        function frac = fraction_days_backlogged(obj)
+            NDays = height(obj.Log);
+            NBacklogged = 0;
+            for j = 1:NDays
+                x = obj.Log.Backlog(j);
+                if x > 0
+                    NBacklogged = NBacklogged + 1;
+                end
+            end
+            frac = NBacklogged / NDays;
+
+        end
+    
+%%
+
+function DelayTimes = fulfilled_order_delay_times(obj)
+    NumFulfilled = length(obj.Fulfilled);
+    DelayTimes = zeros([NumFulfilled, 1]);
+        for j = 1:NumFulfilled
+            x = obj.Fulfilled{j};
+            DelayTimes(j) = x.Time - x.OriginalTime;
+        end
+
+end
+
+
+    
     end
+
 end
