@@ -192,7 +192,7 @@ classdef Inventory < handle
             % If a request has been placed but not yet fulfilled, no
             % additional request is placed.
 
-            randnum = rand();
+            randnum = random("Uniform", 0, 1);
             if 0 <= randnum <= 0.1
                 ShipTime = 2;
             elseif 0.1 <= randnum <= 0.3
@@ -201,10 +201,7 @@ classdef Inventory < handle
                 ShipTime = 4;
             elseif 0.7 <= randnum <= 1
                 ShipTime = 5;
-           
             end
-          
-
             
             if ~obj.RequestPlaced && obj.OnHand <= obj.ReorderPoint
                 order_cost = obj.RequestCostPerBatch ...
