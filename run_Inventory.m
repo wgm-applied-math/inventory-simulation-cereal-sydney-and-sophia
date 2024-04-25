@@ -26,7 +26,7 @@ Q = 200;
 NumSamples = 100;
 
 % Run each sample for this many days.
-MaxTime = 1000;
+MaxTime = 200;
 
 %% Run simulation samples
 
@@ -87,8 +87,7 @@ t = tiledlayout(fig,1,1);
 ax = nexttile(t);
 
 % Histogram of the cost per day.
-h = histogram(ax, TotalCosts/MaxTime, Normalization="probability", ...
-    BinWidth=5);
+h = histogram(ax, TotalCosts/MaxTime, Normalization="probability");
 
 % Add title and axis labels
 title(ax, "Daily total cost");
@@ -96,8 +95,8 @@ xlabel(ax, "Dollars");
 ylabel(ax, "Probability");
 
 % Fix the axis ranges
-ylim(ax, [0, 0.5]);
-xlim(ax, [240, 290]);
+% ylim(ax, [0, 0.5]);
+% xlim(ax, [240, 290]);
 
 % Wait for MATLAB to catch up.
 pause(2);
